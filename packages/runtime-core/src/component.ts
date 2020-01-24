@@ -283,7 +283,6 @@ function setupStatefulComponent(
   instance: ComponentInternalInstance,
   parentSuspense: SuspenseBoundary | null
 ) {
-  let setupResult
   const Component = instance.type as ComponentOptions
 
   if (__DEV__) {
@@ -310,7 +309,9 @@ function setupStatefulComponent(
   // 2. create props proxy
   // the propsProxy is a reactive AND readonly proxy to the actual props.
   // it will be updated in resolveProps() on updates before render
-  const propsProxy = (instance.propsProxy = shallowReadonly(instance.props))
+  const propsProxy = (instance.propsProxy = __SSR__
+    ? instance.props
+    : shallowReadonly(instance.props))
   // 3. call setup()
   const { setup } = Component
   if (setup) {
@@ -319,7 +320,7 @@ function setupStatefulComponent(
 
     currentInstance = instance
     currentSuspense = parentSuspense
-    setupResult = callWithErrorHandling(
+    const setupResult = callWithErrorHandling(
       setup,
       instance,
       ErrorCodes.SETUP_FUNCTION,
@@ -329,7 +330,10 @@ function setupStatefulComponent(
     currentSuspense = null
 
     if (isPromise(setupResult)) {
-      if (__FEATURE_SUSPENSE__) {
+      if (__SSR__) {
+        // return the promise so server-renderer can wait on it
+        return setupResult
+      } else if (__FEATURE_SUSPENSE__) {
         // async setup returned Promise.
         // bail here and wait for re-entry.
         instance.asyncDep = setupResult
@@ -345,8 +349,6 @@ function setupStatefulComponent(
   } else {
     finishComponentSetup(instance, parentSuspense)
   }
-
-  return setupResult
 }
 
 export function handleSetupResult(
@@ -366,7 +368,7 @@ export function handleSetupResult(
     }
     // setup returned bindings.
     // assuming a render function compiled from template is present.
-    instance.renderContext = reactive(setupResult)
+    instance.renderContext = __SSR__ ? setupResult : reactive(setupResult)
   } else if (__DEV__ && setupResult !== undefined) {
     warn(
       `setup() should return an object. Received: ${
@@ -444,7 +446,7 @@ function finishComponentSetup(
   }
 
   if (instance.renderContext === EMPTY_OBJ) {
-    instance.renderContext = reactive({})
+    instance.renderContext = __SSR__ ? {} : reactive({})
   }
 }
 
