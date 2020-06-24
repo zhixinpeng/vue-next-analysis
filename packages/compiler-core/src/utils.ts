@@ -128,6 +128,7 @@ export function advancePositionWithClone(
 
 // advance by mutation without cloning (for performance reasons), since this
 // gets called a lot in the parser
+// 推动编译指针位置前进，计算编译指针的偏移量、行、列数
 export function advancePositionWithMutation(
   pos: Position,
   source: string,
@@ -135,19 +136,28 @@ export function advancePositionWithMutation(
 ): Position {
   let linesCount = 0
   let lastNewLinePos = -1
+  // 字符串索引从 0 到需要编译处理的长度进行遍历
   for (let i = 0; i < numberOfCharacters; i++) {
+    // 找到换行符
     if (source.charCodeAt(i) === 10 /* newline char code */) {
+      // 换行总数
       linesCount++
+      // 换行时最后指向的索引
       lastNewLinePos = i
     }
   }
 
+  // 偏移量加上处理的字符长度即可
   pos.offset += numberOfCharacters
+  // 指针行数加上这段处理字符换行的行数
   pos.line += linesCount
+  // 指针列数要根据是否换行来重新计算
   pos.column =
     lastNewLinePos === -1
-      ? pos.column + numberOfCharacters
-      : numberOfCharacters - lastNewLinePos
+      ? // 没有换行，加上便宜字符长度即可
+        pos.column + numberOfCharacters
+      : // 有换行，总字符长度减去最后换行时的长度即为当前列指针索引
+        numberOfCharacters - lastNewLinePos
 
   return pos
 }

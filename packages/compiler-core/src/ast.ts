@@ -515,6 +515,7 @@ export const locStub: SourceLocation = {
   end: { line: 1, column: 1, offset: 0 }
 }
 
+// 创建一个根 ast 树
 export function createRoot(
   children: TemplateChildNode[],
   loc = locStub
@@ -534,6 +535,7 @@ export function createRoot(
   }
 }
 
+// 创建 codegen
 export function createVNodeCall(
   context: TransformContext | null,
   tag: VNodeCall['tag'],

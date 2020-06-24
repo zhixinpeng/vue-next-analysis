@@ -36,12 +36,20 @@ export const DOMDirectiveTransforms: Record<string, DirectiveTransform> = {
   show: transformShow
 }
 
+// web 平台编译函数入口
 export function compile(
   template: string,
   options: CompilerOptions = {}
 ): CodegenResult {
+  // 合并了与 dom 平台相关编译选项后真正执行的编译函数交给与平台实现无关的 baseCompile 去进行编译处理
+  // baseCompile 在 @vue/compiler-core 内实现
   return baseCompile(
     template,
+    // 编译选项合并
+    // CompilerOptions 包含三大模块：ParserOptions、TransformOptions、CodegenOptions
+    // 这里 parserOptions 实现了 ParserOptions
+    // nodeTransforms 是 TransformOptions 内的选项，包含了 style/transtion 属性的转换为 ast 的函数
+    // directiveTransform 是 TransformOptions 内的选项，包含了指令转换为 ast 的函数
     extend({}, parserOptions, options, {
       nodeTransforms: [...DOMNodeTransforms, ...(options.nodeTransforms || [])],
       directiveTransforms: extend(

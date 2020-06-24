@@ -26,6 +26,7 @@ export function getBaseTransformPreset(
   prefixIdentifiers?: boolean
 ): TransformPreset {
   return [
+    // 第一部分为 nodeTransforms 节点转换方法集合
     [
       transformOnce,
       transformIf,
@@ -44,6 +45,7 @@ export function getBaseTransformPreset(
       trackSlotScopes,
       transformText
     ],
+    // 第二部分为 directiveTransform 指令转换集合
     {
       on: transformOn,
       bind: transformBind,
@@ -78,12 +80,18 @@ export function baseCompile(
     onError(createCompilerError(ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED))
   }
 
+  // 编译核心代码第一步 parse
+  // 将 template 模板及编译选项生成 ast 树
   const ast = isString(template) ? baseParse(template, options) : template
+  // 获取当前的各种基本转换方法，这里获取的是节点转换方法和指令转换方法，是核心的转换方法，与平台无关
   const [nodeTransforms, directiveTransforms] = getBaseTransformPreset(
     prefixIdentifiers
   )
+  // 编译核心代码第二步 transform
+  // 将编译出来的 ast 树和包含了平台实现的完整的 transform 方法传递给 transform 进行转译
   transform(
     ast,
+    // 这里进行选项合并，最主要的是将基本转换方法和平台实现的转换方法进行合并
     extend({}, options, {
       prefixIdentifiers,
       nodeTransforms: [

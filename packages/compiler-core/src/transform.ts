@@ -107,6 +107,7 @@ export interface TransformContext extends Required<TransformOptions> {
   cache<T extends JSChildNode>(exp: T, isVNode?: boolean): CacheExpression | T
 }
 
+// 创建 transform 时的上下文环境
 export function createTransformContext(
   root: RootNode,
   {
@@ -259,13 +260,17 @@ export function createTransformContext(
   return context
 }
 
+// @compiler-core 编译核心代码第二步关键代码：transform 转译
 export function transform(root: RootNode, options: TransformOptions) {
+  // 和 parse 时要 createParseContext 上下文一样，transform 时也要创建一个上下文环境
   const context = createTransformContext(root, options)
   traverseNode(root, context)
   if (options.hoistStatic) {
+    // 静态提升处理
     hoistStatic(root, context)
   }
   if (!options.ssr) {
+    // 创建根节点的 codegen
     createRootCodegen(root, context)
   }
   // finalize meta information
@@ -278,6 +283,7 @@ export function transform(root: RootNode, options: TransformOptions) {
   root.cached = context.cached
 }
 
+// 创建根节点的 codegen
 function createRootCodegen(root: RootNode, context: TransformContext) {
   const { helper } = context
   const { children } = root
@@ -319,6 +325,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
   }
 }
 
+// 转译子节点
 export function traverseChildren(
   parent: ParentNode,
   context: TransformContext
@@ -333,10 +340,13 @@ export function traverseChildren(
     context.parent = parent
     context.childIndex = i
     context.onNodeRemoved = nodeRemoved
+    // 标明子节点的上下文信息之后，继续转译节点，这里是一个深度优先算法
+    // 解析完一个节点的所有子节点之后再去解析下一个
     traverseNode(child, context)
   }
 }
 
+// 对节点进行解析
 export function traverseNode(
   node: RootNode | TemplateChildNode,
   context: TransformContext
@@ -346,6 +356,7 @@ export function traverseNode(
   const { nodeTransforms } = context
   const exitFns = []
   for (let i = 0; i < nodeTransforms.length; i++) {
+    // 执行 nodeTransforms 内的各个节点 transform 方法，如果被执行了就会有返回值，不被执行就没有返回值
     const onExit = nodeTransforms[i](node, context)
     if (onExit) {
       if (isArray(onExit)) {
@@ -355,10 +366,12 @@ export function traverseNode(
       }
     }
     if (!context.currentNode) {
+      // 节点被移除了，返回
       // node was removed
       return
     } else {
       // node may have been replaced
+      // 节点可能被更新了，重新赋值
       node = context.currentNode
     }
   }
@@ -388,17 +401,20 @@ export function traverseNode(
     case NodeTypes.FOR:
     case NodeTypes.ELEMENT:
     case NodeTypes.ROOT:
+      // 如果是根节点，继续解析子元素
       traverseChildren(node, context)
       break
   }
 
   // exit transforms
+  // 依次执行 transform 方法
   let i = exitFns.length
   while (i--) {
     exitFns[i]()
   }
 }
 
+// 通用的指令 transform 函数
 export function createStructuralDirectiveTransform(
   name: string | RegExp,
   fn: StructuralDirectiveTransform
@@ -413,11 +429,14 @@ export function createStructuralDirectiveTransform(
       // structural directive transforms are not concerned with slots
       // as they are handled separately in vSlot.ts
       if (node.tagType === ElementTypes.TEMPLATE && props.some(isVSlot)) {
+        // 如果节点是 template 类型，或者是一个 v-slot 的插槽，返回
         return
       }
       const exitFns = []
       for (let i = 0; i < props.length; i++) {
         const prop = props[i]
+        // 依次遍历 props，取出其中的 DIRECTIVE 指令，去和传入的 name 匹配
+        // 若匹配上了继续处理，否则没有处理
         if (prop.type === NodeTypes.DIRECTIVE && matches(prop.name)) {
           // structural directives are removed to avoid infinite recursion
           // also we remove them *before* applying so that it can further

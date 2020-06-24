@@ -80,6 +80,7 @@ export interface CodegenContext extends Required<CodegenOptions> {
   newline(): void
 }
 
+// 生成 codegen 的上下文描述
 function createCodegenContext(
   ast: RootNode,
   {
@@ -177,10 +178,12 @@ function createCodegenContext(
   return context
 }
 
+// 将生成好 codegen 的 ast 树去生成 render 函数字符串
 export function generate(
   ast: RootNode,
   options: CodegenOptions = {}
 ): CodegenResult {
+  // 生成 codegen 的上下文
   const context = createCodegenContext(ast, options)
   const {
     mode,
@@ -259,6 +262,7 @@ export function generate(
     push(`return `)
   }
   if (ast.codegenNode) {
+    // 将 ast 中的 codegenNode 转化为 node
     genNode(ast.codegenNode, context)
   } else {
     push(`null`)
@@ -528,6 +532,7 @@ function genNodeList(
   }
 }
 
+// 将 codegenNode 转译成 node
 function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
   if (isString(node)) {
     context.push(node)

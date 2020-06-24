@@ -29,6 +29,7 @@ import { validateBrowserExpression } from '../validateExpression'
 
 const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
 
+// 对属性的表达式进行转译
 export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.INTERPOLATION) {
     node.content = processExpression(
@@ -38,13 +39,16 @@ export const transformExpression: NodeTransform = (node, context) => {
   } else if (node.type === NodeTypes.ELEMENT) {
     // handle directives on element
     for (let i = 0; i < node.props.length; i++) {
+      // 获取到某个属性的 ast 表述
       const dir = node.props[i]
       // do not process for v-on & v-for since they are special handled
+      // 这里不处理 v-on 和 v-for，它们有独立的处理函数
       if (dir.type === NodeTypes.DIRECTIVE && dir.name !== 'for') {
         const exp = dir.exp
         const arg = dir.arg
         // do not process exp if this is v-on:arg - we need special handling
         // for wrapping inline statements.
+        // 这里处理 exp，就是指令绑定的表达式部分
         if (
           exp &&
           exp.type === NodeTypes.SIMPLE_EXPRESSION &&
@@ -57,6 +61,7 @@ export const transformExpression: NodeTransform = (node, context) => {
             dir.name === 'slot'
           )
         }
+        // 这里处理 arg，就是指令绑定的属性名参数部分
         if (arg && arg.type === NodeTypes.SIMPLE_EXPRESSION && !arg.isStatic) {
           dir.arg = processExpression(arg, context)
         }
@@ -87,6 +92,7 @@ export function processExpression(
 ): ExpressionNode {
   if (__DEV__ && __BROWSER__) {
     // simple in-browser validation (same logic in 2.x)
+    // 对 exp 进行浏览器侧的校验
     validateBrowserExpression(node, context, asParams, asRawStatements)
     return node
   }
